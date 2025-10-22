@@ -1,0 +1,43 @@
+# Visual Studio / VSCode / .NET build artifacts
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Resharper / Rider
+_ReSharper*/
+*.[Rr]e[Ss]harper
+JetBrains.ReSharper.Shared
+
+# Logs
+*.log
+
+# NuGet
+*.nupkg
+# Packages
+packages/
+**/packages/*
+
+# IIS / ASP.NET
+wwwroot/*
+**/wwwroot/lib/*
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]uild/
+
+# Others
+*.swp
+*.tmp
+*.cache
+~*
+Thumbs.db
+
+# Configuration sensitive (à adapter)
+appsettings.Development.json
