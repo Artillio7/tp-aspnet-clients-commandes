@@ -41,3 +41,5 @@ Thumbs.db
 
 # Configuration sensitive (à adapter)
 appsettings.Development.json
+# Documentation locale non versionnée
+Guide_SQLServer_ASPNET.md
