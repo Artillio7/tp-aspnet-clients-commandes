@@ -1,52 +1,89 @@
 # TP ASP.NET Core — Gestion des Clients et Commandes
 
-Ce dépôt documente et prépare la réalisation d’une API REST permettant de gérer des clients et leurs commandes avec ASP.NET Core et Entity Framework Core. Le briefing détaillé est disponible dans `initial.md`.
+Ce dépôt contient une API REST ASP.NET Core pour gérer des clients et des commandes avec SQL Server et Entity Framework Core. Le cadrage détaillé est dans `initial.md`. Cette page résume l’essentiel à retenir et donne les étapes pratiques pour lancer et tester l’API.
 
-## Aperçu
-- API REST pour créer, consulter, mettre à jour et supprimer des clients et des commandes.
-- Relation One‑To‑Many: un client possède plusieurs commandes; une commande appartient à un seul client.
-- Validation des entrées: Data Annotations et FluentValidation.
-- Base de données SQL Server gérée via EF Core (migrations).
+## À retenir (essentiel)
+- Base SQL Server: instance `\\SQLEXPRESS` locale, base `TpClientsCommandesDb`.
+- Chaîne de connexion: `Server=.\\SQLEXPRESS;Database=TpClientsCommandesDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true` (dans `appsettings.json`).
+- HTTPS: faire confiance au certificat dev (`dotnet dev-certs https --trust`). Le pop-up Windows “Avertissement de sécurité” est normal en local; cliquez sur `Oui`.
+- Documentation: Swagger est accessible sur `https://localhost:7057/swagger` (et `http://localhost:5285/swagger`).
+- Validation: DataAnnotations + FluentValidation activées automatiquement (`[ApiController]` + `AddFluentValidationAutoValidation`).
+- Endpoints (CRUD):
+  - Clients: `GET /api/clients`, `GET /api/clients/{id}`, `POST /api/clients`, `PUT /api/clients/{id}`, `DELETE /api/clients/{id}`.
+  - Commandes: `GET /api/commandes?clientId=`, `GET /api/commandes/{id}`, `POST /api/commandes`, `PUT /api/commandes/{id}`, `DELETE /api/commandes/{id}`.
 
-## Objectifs pédagogiques
-- Concevoir une API REST maintenable, testée et documentée.
-- Modéliser correctement les entités et leurs relations.
-- Mettre en place des validations et une gestion d’erreurs cohérente.
-- Écrire des tests unitaires et d’intégration.
+## Prérequis
+- .NET SDK 8+ (`dotnet --version` ≥ 8.x). 
+- SQL Server Express (service `MSSQL$SQLEXPRESS` en cours d’exécution).
+- Outil ligne de commande SQL (`sqlcmd`) pour tests rapides.
 
-## Périmètre fonctionnel
-- Clients: `GET /api/clients`, `GET /api/clients/{id}`, `POST /api/clients`, `PUT /api/clients/{id}`, `DELETE /api/clients/{id}`.
-- Commandes: `GET /api/commandes`, `GET /api/commandes/{id}`, `POST /api/commandes`, `PUT /api/commandes/{id}`, `DELETE /api/commandes/{id}`.
-- Association d’une commande à un client: `POST /api/clients/{clientId}/commandes`.
+## Mise en place de la base
+Deux options (si l’outil `dotnet ef` ne fonctionne pas dans votre terminal, utilisez le script):
 
-## Pile technique
-- ASP.NET Core Web API (C# / .NET 7 ou 8)
-- Entity Framework Core + SQL Server
-- FluentValidation
-- Tests: xUnit / MSTest + `WebApplicationFactory` pour intégration
+- Option A (EF Core):
+  - `dotnet tool install -g dotnet-ef`
+  - `dotnet ef database update`
 
-## Mise en route (préparation du projet)
-1) Créer le projet API:
-   - `dotnet new webapi -n TpClientsCommandes`
-2) Ajouter les packages NuGet:
-   - `dotnet add package Microsoft.EntityFrameworkCore.SqlServer`
-   - `dotnet add package Microsoft.EntityFrameworkCore.Tools`
-   - `dotnet add package FluentValidation`
-   - `dotnet add package FluentValidation.AspNetCore`
-3) Configurer `AppDbContext` et la chaîne de connexion dans `appsettings.json`.
-4) Générer la migration initiale et mettre à jour la base:
-   - `dotnet tool install -g dotnet-ef`
-   - `dotnet ef migrations add InitialCreate`
-   - `dotnet ef database update`
+- Option B (script SQL manuel — déjà validé):
+  - `sqlcmd -S .\SQLEXPRESS -i "TpClientsCommandes\Scripts\InitSql.sql"`
+  - `sqlcmd -S .\SQLEXPRESS -i "TpClientsCommandes\Scripts\SeedSql.sql"`
+  - Crée la base `TpClientsCommandesDb`, les tables `Clients` et `Commandes`, l’index et la FK cascade.
 
-Les étapes et exemples de code sont détaillés dans `initial.md`.
+## Lancer l’API
+Séquence validée (SDK installé sur `E:\dotnet`) — commandes dans l’ordre:
 
-## Structure cible
+1) Initialiser et peupler la base SQL (instance locale `\\SQLEXPRESS`):
+   - `sqlcmd -S .\SQLEXPRESS -i "TpClientsCommandes\Scripts\InitSql.sql"`
+   - `sqlcmd -S .\SQLEXPRESS -i "TpClientsCommandes\Scripts\SeedSql.sql"`
+
+2) Préparer l’environnement .NET (session PowerShell):
+   - `$env:DOTNET_ROOT='E:\dotnet'`
+   - `$env:PATH='E:\dotnet;' + $env:PATH`
+   - (option de vérification) `E:\dotnet\dotnet.exe --list-sdks`
+
+3) Faire confiance au certificat HTTPS de dev:
+   - `E:\dotnet\dotnet.exe dev-certs https --trust`
+
+4) Restaurer et démarrer l’API (répertoire `TpClientsCommandes`):
+   - `E:\dotnet\dotnet.exe restore`
+   - `E:\dotnet\dotnet.exe run --launch-profile https`
+
+5) Ouvrir la documentation Swagger:
+   - `https://localhost:7057/swagger` (HTTPS) — alternatif HTTP: `http://localhost:5285/swagger`
+
+6) Vérifications rapides (terminal):
+   - `curl.exe -s -k https://localhost:7057/api/clients`
+   - `curl.exe -s -k "https://localhost:7057/api/commandes?clientId=1"`
+
+## Exemples de payloads Swagger
+- POST `/api/clients`
+```
+{
+  "Nom": "Doe",
+  "Prenom": "John",
+  "Email": "john@example.com",
+  "Telephone": "0123456789",
+  "Adresse": "123 Rue Ex"
+}
+```
+
+- POST `/api/commandes` (après création de client, ex: `ClientId = 1`)
+```
+{
+  "NumeroCommande": "CMD-2025-0001",
+  "DateCommande": "2025-10-23T10:00:00Z",
+  "MontantTotal": 99.90,
+  "Statut": "EnCours",
+  "ClientId": 1
+}
+```
+
+## Structure du projet
 ```
 TpClientsCommandes/
   Controllers/
-    ClientController.cs
-    CommandeController.cs
+    ClientsController.cs
+    CommandesController.cs
   Models/
     Client.cs
     Commande.cs
@@ -55,39 +92,35 @@ TpClientsCommandes/
   Validators/
     ClientValidator.cs
     CommandeValidator.cs
-  appsettings.json
+  Scripts/
+    InitSql.sql
   Program.cs
+  appsettings.json
 ```
 
 ## Validation et erreurs
-- Data Annotations pour les contraintes simples (Required, StringLength, EmailAddress, Range).
-- FluentValidation pour les règles avancées.
-- Gestion unifiée des erreurs via middleware ou filtre d’exception + `ProblemDetails`.
-- Codes HTTP cohérents: 400 (validation), 404 (non trouvé), 409 (conflit), 500 (erreur serveur).
+- DataAnnotations: `Required`, `StringLength`, `EmailAddress`, `Range`.
+- FluentValidation: règles avancées sur `Client` et `Commande`.
+- `[ApiController]` + auto-validation: renvoie `400 Bad Request` avec détails en cas de payload invalide.
 
-## Suppression en cascade
-- Configuration EF: `OnDelete(DeleteBehavior.Cascade)` entre `Client` et `Commande`.
-- Tests: suppression d’un client entraîne la suppression de ses commandes.
+## Dépannage rapide
+- Vérifier SQL Server:
+  - `sqlcmd -S .\SQLEXPRESS -Q "SELECT @@VERSION"`
+  - Service: `Get-Service -Name 'MSSQL$SQLEXPRESS'`
+- Instance nommée: si `SQLBrowser` est arrêté/désactivé, l’accès par nom peut échouer. 
+  - Solution préférée: démarrer `SQLBrowser` (admin requis).
+  - Alternative: fixer un port statique et utiliser `Server=localhost,1433;...`.
+- Certificat HTTPS non approuvé:
+  - `dotnet dev-certs https --trust` puis accepter le pop-up Windows (cliquer `Oui`).
+- `dotnet ef` introuvable: installer l’outil en global, ou utiliser le script SQL.
 
-## Tests
-- Unitaires: règles métier et validations.
-- Intégration: endpoints API avec `WebApplicationFactory`.
-
-## Mise en ligne GitHub
-- Propriétaire: `Artillio7`
-- Collaborateur enseignant: `nt37`
-- Recommandation de nom de dépôt: `tp-aspnet-clients-commandes`
-
-### Création du dépôt et push
-1) Créer le dépôt sur GitHub (`https://github.com/new`) avec le nom `tp-aspnet-clients-commandes` (visibilité: `private` conseillée).
-2) Ajouter le remote et pousser:
-   - `git remote add origin https://github.com/Artillio7/tp-aspnet-clients-commandes.git`
-   - `git push -u origin main`
-3) Ajouter le collaborateur (interface GitHub):
-   - Dépôt → `Settings` → `Collaborators` → `Add people` → rechercher `nt37` → envoyer l’invitation.
-
-## Assistance IA
-Ce projet bénéficie d’un appui d’assistance IA pour la rédaction et le cadrage technique (pair programming). Les propositions générées sont systématiquement revues, adaptées au contexte et validées avant intégration. L’IA ne remplace pas les bonnes pratiques de conception, de revue et de test.
+## Commandes utiles
+- Build: `dotnet build`
+- Run: `dotnet run --launch-profile https`
+- Tool EF: `dotnet tool install -g dotnet-ef`
+- Migration: `dotnet ef migrations add InitialCreate`
+- Update DB: `dotnet ef database update`
+- Script manuel DB: `sqlcmd -S .\SQLEXPRESS -i "TpClientsCommandes\Scripts\InitSql.sql"`
 
 ## Licence
-Projet académique. Toute réutilisation doit respecter le cadre pédagogique défini par l’enseignant.
+Projet académique. Toute réutilisation doit respecter le cadre pédagogique défini.
