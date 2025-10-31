@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TpClientsCommandes.Data;
 using TpClientsCommandes.Models;
+using TpClientsCommandes.Dtos;
 
 namespace TpClientsCommandes.Controllers
 {
@@ -16,35 +17,36 @@ namespace TpClientsCommandes.Controllers
         /// Liste des commandes (filtrable par clientId).
         /// </summary>
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<Commande>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<Commande>>> GetAll([FromQuery] int? clientId)
+        [ProducesResponseType(typeof(IEnumerable<CommandeResponseDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<CommandeResponseDto>>> GetAll([FromQuery] int? clientId)
         {
             var query = _db.Commandes.AsNoTracking().Include(c => c.Client).AsQueryable();
             if (clientId.HasValue)
                 query = query.Where(c => c.ClientId == clientId.Value);
             var list = await query.OrderByDescending(c => c.DateCommande).ToListAsync();
-            return Ok(list);
+            var dtos = list.Select(MapCommandeToResponseDto).ToList();
+            return Ok(dtos);
         }
 
         /// <summary>
         /// Détail d'une commande.
         /// </summary>
         [HttpGet("{id:int}")]
-        [ProducesResponseType(typeof(Commande), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(CommandeResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Commande>> GetById(int id)
+        public async Task<ActionResult<CommandeResponseDto>> GetById(int id)
         {
             var cmd = await _db.Commandes.AsNoTracking().Include(c => c.Client).FirstOrDefaultAsync(c => c.Id == id);
-            return cmd is null ? NotFound() : Ok(cmd);
+            return cmd is null ? NotFound() : Ok(MapCommandeToResponseDto(cmd));
         }
 
         /// <summary>
         /// Crée une commande.
         /// </summary>
         [HttpPost]
-        [ProducesResponseType(typeof(Commande), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(CommandeResponseDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<Commande>> Create([FromBody] Commande commande)
+        public async Task<ActionResult<CommandeResponseDto>> Create([FromBody] Commande commande)
         {
             var clientExists = await _db.Clients.AnyAsync(c => c.Id == commande.ClientId);
             if (!clientExists)
@@ -52,7 +54,11 @@ namespace TpClientsCommandes.Controllers
 
             _db.Commandes.Add(commande);
             await _db.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetById), new { id = commande.Id }, commande);
+
+            // Charger le client pour compléter le DTO
+            await _db.Entry(commande).Reference(c => c.Client).LoadAsync();
+            var dto = MapCommandeToResponseDto(commande);
+            return CreatedAtAction(nameof(GetById), new { id = commande.Id }, dto);
         }
 
         /// <summary>
@@ -95,6 +101,29 @@ namespace TpClientsCommandes.Controllers
             _db.Commandes.Remove(cmd);
             await _db.SaveChangesAsync();
             return NoContent();
+        }
+
+        private static CommandeResponseDto MapCommandeToResponseDto(Commande c)
+        {
+            return new CommandeResponseDto
+            {
+                Id = c.Id,
+                NumeroCommande = c.NumeroCommande,
+                DateCommande = c.DateCommande,
+                MontantTotal = c.MontantTotal,
+                Statut = c.Statut,
+                ClientId = c.ClientId,
+                Client = c.Client == null ? null : new ClientSummaryDto
+                {
+                    Id = c.Client.Id,
+                    Nom = c.Client.Nom,
+                    Prenom = c.Client.Prenom,
+                    Email = c.Client.Email,
+                    Telephone = c.Client.Telephone,
+                    Adresse = c.Client.Adresse,
+                    DateCreation = c.Client.DateCreation
+                }
+            };
         }
     }
 }
