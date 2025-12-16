@@ -1,13 +1,24 @@
-# Visual Studio / VSCode / .NET build artifacts
+# Build outputs
 bin/
 obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]uild/
+
+# Visual Studio / VS Code
 .vs/
+.vscode/
+
+# User-specific files
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
 
 # Resharper / Rider
+.idea/
 _ReSharper*/
 *.[Rr]e[Ss]harper
 JetBrains.ReSharper.Shared
@@ -17,7 +28,6 @@ JetBrains.ReSharper.Shared
 
 # NuGet
 *.nupkg
-# Packages
 packages/
 **/packages/*
 
@@ -25,21 +35,31 @@ packages/
 wwwroot/*
 **/wwwroot/lib/*
 
-# Build results
-[Dd]ebug/
-[Rr]elease/
-x64/
-x86/
-[Bb]uild/
-
 # Others
 *.swp
 *.tmp
 *.cache
 ~*
+
+# OS files
+.DS_Store
 Thumbs.db
 
-# Configuration sensitive (à adapter)
+# Configuration sensitive
 appsettings.Development.json
-# Documentation locale non versionnée
+*.pfx
+*.p12
+
+# Documentation locale
 Guide_SQLServer_ASPNET.md
+
+# AI Tools
+.claude/
+.cursor/
+.aider*
+.copilot/
+.github/copilot/
+.codeium/
+.tabnine/
+.continue/
+CLAUDE.md
